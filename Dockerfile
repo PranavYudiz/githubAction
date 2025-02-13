@@ -1,30 +1,31 @@
+FROM node
+LABEL authors="Pranav Kakadiya"
+# update dependencies and install curl
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+# Create app directory
+WORKDIR /app
+# Install app dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# where available (npm@5+)
+# COPY package*.json ./ \
+#     ./source ./
 
-# Set the base image with the specified Node.js version
-ARG NODE_VERSION=22.4.1
-FROM node:${NODE_VERSION}-alpine
-
-# Set the environment variable for Node.js to run in production mode
-ENV NODE_ENV production
-
-# Create and set the working directory inside the container
-WORKDIR /usr/src/app
-
-# Install dependencies by leveraging Docker's caching
-# Use bind mounts to package.json and package-lock.json for faster builds
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=package-lock.json,target=package-lock.json \
-    --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
-
-# Switch to a non-root user for running the application
-USER node
-
-# Copy all the application source files into the container
+# This will copy everything from the source path 
+# --more of a convenience when testing locally.
 COPY . .
-
-# Expose port 3000 for the application
-EXPOSE 3000
-
-# Define the command to run the application
-CMD ["node", "server.js"]
-
+# update each dependency in package.json to the latest version
+RUN npm install -g npm-check-updates \
+    ncu -u \
+    npm install \
+    npm install express \
+    npm install babel-cli \
+    npm install babel-preset \
+    npm install babel-preset-env
+# If you are building your code for production
+RUN npm ci --only=production
+# Bundle app source
+COPY . /app
+EXPOSE 3002
+CMD [ "babel-node", "app.js" ]
